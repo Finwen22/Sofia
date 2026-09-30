@@ -46,3 +46,25 @@ export async function salir() {
   await supabase.auth.signOut();
   redirect("/ingresar");
 }
+
+export async function recuperar(_: ActionState, fd: FormData): Promise<ActionState> {
+  const email = str(fd, "email");
+  if (!email) return { error: "Poné tu email." };
+  const supabase = await createClient();
+  const h = await headers();
+  const origin = h.get("origin") ?? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/confirm?next=/nueva-clave` });
+  // Por seguridad no decimos si el email existe o no.
+  if (error && error.status === 429) return { error: "Pediste demasiados links seguidos. Esperá unos minutos." };
+  return { ok: true };
+}
+
+export async function nuevaClave(_: ActionState, fd: FormData): Promise<ActionState> {
+  const password = str(fd, "password");
+  if (!password || password.length < 8) return { error: "La contraseña tiene que tener al menos 8 caracteres." };
+  if (password !== str(fd, "password2")) return { error: "Las dos contraseñas no coinciden." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: "No se pudo cambiar. Pedí un link nuevo e intentá otra vez." };
+  redirect("/");
+}

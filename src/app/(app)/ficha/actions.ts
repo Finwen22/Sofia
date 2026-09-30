@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getContext, requireBaby } from "@/lib/session";
 import { dec, num, oneOf, str, triBool, type ActionState } from "@/lib/forms";
 import { fromLocalInput } from "@/lib/time";
+import { sendPush } from "@/lib/push";
 
 export async function editarFicha(_: ActionState, fd: FormData): Promise<ActionState> {
   const { supabase, baby } = await requireBaby();
@@ -80,4 +81,48 @@ export async function cambiarMiNombre(_: ActionState, fd: FormData): Promise<Act
   if (error) return { error: "No se pudo guardar." };
   revalidatePath("/ficha/ajustes");
   return { ok: true };
+}
+
+export async function guardarRecordatorio(_: ActionState, fd: FormData): Promise<ActionState> {
+  const { supabase, baby } = await requireBaby();
+  const intervalo = (num(fd, "horas") ?? 0) * 60 + (num(fd, "minutos") ?? 0);
+  const antes = num(fd, "antes") ?? 30;
+  if (intervalo < 30 || intervalo > 720) return { error: "El intervalo tiene que estar entre 30 minutos y 12 horas." };
+  if (antes < 0 || antes >= intervalo) return { error: "El aviso tiene que ser antes de que se cumpla el intervalo." };
+  const { error } = await supabase
+    .from("babies")
+    .update({ feed_reminders: fd.get("activo") === "on", feed_interval_min: intervalo, feed_reminder_lead_min: antes })
+    .eq("id", baby.id);
+  if (error) return { error: "No se pudo guardar." };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+type SubJSON = { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+
+export async function suscribirPush(sub: SubJSON): Promise<ActionState> {
+  const { supabase, member, user } = await getContext();
+  const endpoint = sub.endpoint;
+  const p256dh = sub.keys?.p256dh;
+  const auth = sub.keys?.auth;
+  if (!endpoint?.startsWith("https://") || !p256dh || !auth) return { error: "Suscripción inválida." };
+  const { error } = await supabase
+    .from("push_subscriptions")
+    .upsert({ family_id: member.family_id, user_id: user.id, endpoint, p256dh, auth }, { onConflict: "endpoint" });
+  if (error) return { error: "No se pudo activar en este celular." };
+  return { ok: true };
+}
+
+export async function desuscribirPush(endpoint: string): Promise<void> {
+  const { supabase } = await getContext();
+  await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+}
+
+export async function probarPush(): Promise<ActionState> {
+  const { supabase, user } = await getContext();
+  const { data } = await supabase.from("push_subscriptions").select("endpoint, p256dh, auth").eq("user_id", user.id);
+  if (!data?.length) return { error: "Este usuario no tiene celulares con notificaciones activadas." };
+  const gone = await sendPush(data, { title: "Sofía", body: "Así te va a llegar el aviso de la próxima toma.", url: "/", tag: "prueba" });
+  if (gone.length) await supabase.from("push_subscriptions").delete().in("endpoint", gone);
+  return gone.length === data.length ? { error: "El celular dio de baja las notificaciones. Volvé a activarlas." } : { ok: true };
 }

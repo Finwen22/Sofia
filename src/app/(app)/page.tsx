@@ -48,8 +48,10 @@ export default async function Inicio() {
   const promedio = intervaloPromedio(tomas);
   const sesiones = sesionesDeToma(tomas);
   const ultimaSesion = sesiones[sesiones.length - 1];
-  const proxima = promedio && ultimaSesion ? new Date(ultimaSesion.getTime() + promedio * 60000) : null;
-  const avance = promedio && ultimaSesion ? Math.min(100, ((now.getTime() - ultimaSesion.getTime()) / 60000 / promedio) * 100) : 0;
+  // Con recordatorio activo manda el intervalo configurado; si no, el promedio del día.
+  const intervalo = baby.feed_reminders ? baby.feed_interval_min : promedio;
+  const proxima = intervalo && ultimaSesion ? new Date(ultimaSesion.getTime() + intervalo * 60000) : null;
+  const avance = intervalo && ultimaSesion ? Math.min(100, ((now.getTime() - ultimaSesion.getTime()) / 60000 / intervalo) * 100) : 0;
 
   const panales = diapers.data ?? [];
   const panalesHoy = panales.filter((d) => new Date(d.changed_at) >= hoy);
@@ -125,13 +127,13 @@ export default async function Inicio() {
             <>
               <span className="display text-[32px] leading-none">{haceCuanto(ultima.started_at, now)}</span>
               <span className="text-[15px]">{ladoTexto(ultima)}</span>
-              {promedio && proxima && (
+              {intervalo && proxima && (
                 <div className="flex flex-col gap-1.5">
                   <div className="h-2 overflow-hidden rounded-full bg-soft">
                     <div className="h-full rounded-full bg-accent" style={{ width: `${avance}%` }} />
                   </div>
                   <div className="flex justify-between text-[13px] text-muted">
-                    <span>Promedio: cada {duracion(promedio)}</span>
+                    <span>{baby.feed_reminders ? `Cada ${duracion(intervalo)}` : `Promedio: cada ${duracion(intervalo)}`}</span>
                     <span>Próx. ~{hhmm(proxima)}</span>
                   </div>
                 </div>

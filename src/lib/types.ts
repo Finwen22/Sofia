@@ -21,6 +21,9 @@ export type Baby = {
   pediatrician_phone: string | null;
   feeding_mode: "pecho" | "mixta" | "formula" | null;
   notes: string | null;
+  feed_reminders: boolean;
+  feed_interval_min: number;
+  feed_reminder_lead_min: number;
 };
 
 export type Feeding = {

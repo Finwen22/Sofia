@@ -1,0 +1,8 @@
+import { RecuperarForm } from "./RecuperarForm";
+
+export const metadata = { title: "Recuperar contraseña · Sofía" };
+
+export default async function Page({ searchParams }: PageProps<"/recuperar">) {
+  const { error } = await searchParams;
+  return <RecuperarForm aviso={error === "link" ? "Ese link venció o se abrió en otro navegador. Pedí uno nuevo y abrilo en este mismo." : undefined} />;
+}

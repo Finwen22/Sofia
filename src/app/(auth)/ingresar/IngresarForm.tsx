@@ -27,6 +27,9 @@ export function IngresarForm({ aviso, info }: { aviso?: string; info?: string })
         <Link href="/crear-cuenta" className="px-3 py-2 text-[15px] font-semibold text-accent">
           Crear una cuenta
         </Link>
+        <Link href="/recuperar" className="px-3 py-1 text-[14px] text-muted">
+          Me olvidé la contraseña
+        </Link>
       </div>
     </form>
   );

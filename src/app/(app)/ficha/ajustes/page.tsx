@@ -4,11 +4,12 @@ import { getContext } from "@/lib/session";
 import { salir } from "@/app/(auth)/actions";
 import { cancelarInvitacion, quitarMiembro } from "../actions";
 import { InvitarForm, MiNombreForm } from "./Forms";
+import { PushCelular, RecordatorioForm } from "./Recordatorio";
 
 export const metadata = { title: "Ajustes · Sofía" };
 
 export default async function Page() {
-  const { supabase, member, user } = await getContext();
+  const { supabase, member, user, baby } = await getContext();
   const esAdmin = member.role === "admin";
   const [miembros, invitaciones] = await Promise.all([
     supabase.from("family_members").select("user_id, display_name, role").eq("family_id", member.family_id).order("created_at"),
@@ -20,6 +21,16 @@ export default async function Page() {
   return (
     <>
       <PageHeader eyebrow="Ficha" title="Ajustes" back="/ficha" />
+
+      <section id="recordatorio" className="flex scroll-mt-6 flex-col gap-2">
+        <h2 className="eyebrow mt-2">Recordatorio de tomas</h2>
+        <div className="card flex flex-col gap-4 p-4">
+          {baby && <RecordatorioForm activo={baby.feed_reminders} intervalo={baby.feed_interval_min} antes={baby.feed_reminder_lead_min} />}
+          <div className="border-t border-line pt-4">
+            <PushCelular />
+          </div>
+        </div>
+      </section>
 
       <section className="flex flex-col gap-2">
         <h2 className="eyebrow mt-2">Tu perfil</h2>

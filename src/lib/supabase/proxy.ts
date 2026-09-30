@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_KEY, SUPABASE_URL } from "./env";
 
-const PUBLIC_PATHS = ["/ingresar", "/crear-cuenta"];
+const PUBLIC_PATHS = ["/ingresar", "/crear-cuenta", "/recuperar"];
 // Siempre accesible, con o sin sesión.
 const OPEN_PATHS = ["/auth/"];
 

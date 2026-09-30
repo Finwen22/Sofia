@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
+
+# SQL con secretos, se corre a mano en Supabase
+supabase/*.local.sql

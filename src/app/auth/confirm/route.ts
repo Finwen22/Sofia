@@ -9,6 +9,9 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type") as EmailOtpType | null;
+  // Solo rutas internas (evita redirigir a otro sitio).
+  const nextParam = url.searchParams.get("next");
+  const next = nextParam?.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
   const supabase = await createClient();
 
   let ok = false;
@@ -20,6 +23,7 @@ export async function GET(request: NextRequest) {
 
   // Si se abrió el mail en otro navegador (ej. el celular) no hay sesión que
   // abrir, pero el email igual quedó confirmado: que ingrese con su contraseña.
-  const destino = new URL(ok ? "/" : "/ingresar?aviso=confirmada", url.origin);
+  const fallo = next === "/nueva-clave" ? "/recuperar?error=link" : "/ingresar?aviso=confirmada";
+  const destino = new URL(ok ? next : fallo, url.origin);
   return NextResponse.redirect(destino);
 }
