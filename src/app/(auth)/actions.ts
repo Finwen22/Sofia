@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { str, type ActionState } from "@/lib/forms";
@@ -23,10 +24,12 @@ export async function registrarse(_: ActionState, fd: FormData): Promise<ActionS
   if (password.length < 8) return { error: "La contraseña tiene que tener al menos 8 caracteres." };
 
   const supabase = await createClient();
+  const h = await headers();
+  const origin = h.get("origin") ?? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { display_name: nombre } },
+    options: { data: { display_name: nombre }, emailRedirectTo: `${origin}/auth/confirm` },
   });
   if (error) {
     if (error.message.toLowerCase().includes("registered")) return { error: "Ese email ya tiene cuenta. Probá ingresar." };

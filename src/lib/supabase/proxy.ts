@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_KEY, SUPABASE_URL } from "./env";
 
 const PUBLIC_PATHS = ["/ingresar", "/crear-cuenta"];
+// Siempre accesible, con o sin sesión.
+const OPEN_PATHS = ["/auth/"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -20,6 +22,8 @@ export async function updateSession(request: NextRequest) {
       },
     },
   });
+
+  if (OPEN_PATHS.some((p) => request.nextUrl.pathname.startsWith(p))) return response;
 
   const { data } = await supabase.auth.getClaims();
   const isPublic = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));

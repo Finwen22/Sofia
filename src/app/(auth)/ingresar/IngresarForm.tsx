@@ -6,10 +6,13 @@ import { ingresar } from "../actions";
 import { FormError } from "@/components/FormError";
 import { Submit } from "@/components/Submit";
 
-export function IngresarForm({ aviso }: { aviso?: string }) {
+export function IngresarForm({ aviso, info }: { aviso?: string; info?: string }) {
   const [state, action] = useActionState(ingresar, undefined);
   return (
     <form action={action} className="flex flex-col gap-4">
+      {info && !state?.error && (
+        <p role="status" className="rounded-2xl bg-soft px-4 py-3 text-[15px] text-soft-ink">{info}</p>
+      )}
       <FormError message={state?.error ?? aviso} />
       <label className="flex flex-col gap-1.5">
         <span className="label">Email</span>
