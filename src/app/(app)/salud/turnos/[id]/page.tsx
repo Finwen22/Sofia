@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { requireBaby } from "@/lib/session";
@@ -16,6 +17,9 @@ export default async function Page({ params }: PageProps<"/salud/turnos/[id]">) 
   return (
     <>
       <PageHeader eyebrow="Turno" title={turno.kind} back="/salud" />
+      {!turno.done && (
+        <Link href="/salud/resumen" className="btn-ghost h-12 text-[15px]">Ver resumen para llevar al control</Link>
+      )}
       <TurnoForm turno={turno} fechaInicial={toLocalInput(new Date(turno.scheduled_at))} pediatra={baby.pediatrician_name} />
       <form action={borrarTurno}>
         <input type="hidden" name="id" value={turno.id} />

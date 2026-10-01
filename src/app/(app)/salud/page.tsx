@@ -53,6 +53,16 @@ export default async function Page() {
   return (
     <>
       <PageHeader eyebrow="Salud" title="Controles y cuidados" />
+      <Link href="/salud/resumen" className="card flex items-center gap-3.5 border-accent/50 px-4 py-3.5">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-accent text-on-accent">
+          <Icon name="list" />
+        </span>
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[15px] font-semibold">Resumen para el pediatra</span>
+          <span className="text-[13px] text-muted">Tomas, pañales, sueño, peso y preguntas, listo para mostrar o mandar en PDF</span>
+        </span>
+        <Icon name="chev" size={18} className="text-muted" />
+      </Link>
 
       <Seccion titulo="Turnos" accion={<Agregar href="/salud/turnos/nuevo" label="Turno" />}>
         {(proximos.data ?? []).length === 0 && <p className="text-[15px] text-muted">No hay turnos agendados.</p>}

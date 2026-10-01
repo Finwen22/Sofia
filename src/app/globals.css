@@ -103,3 +103,27 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .orb { animation: none; opacity: 0.6; }
 }
+
+/* Impresión / PDF (resumen para el pediatra): papel claro, sin animaciones. */
+@media print {
+  :root {
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-2: #ffffff;
+    --color-line: #d6d0c8;
+    --color-ink: #1d1a17;
+    --color-muted: #4a443d;
+    --color-faint: #6b645c;
+    --color-accent: #7a5530;
+    --color-on-accent: #ffffff;
+    --color-soft: #f3eee7;
+    --color-soft-ink: #3b3129;
+    --color-alert: #9b2c1c;
+    --color-alert-bg: #fbeee9;
+    color-scheme: light;
+  }
+  @page { margin: 14mm; }
+  html, body { background: #fff !important; }
+  main { padding: 0 !important; max-width: none !important; }
+  .card, section, tr { break-inside: avoid; }
+}
