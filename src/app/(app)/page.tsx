@@ -26,7 +26,7 @@ export default async function Inicio() {
   const hace24 = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
   const hoy = startOfTodayAR(now);
 
-  const [feedings, diapers, sleeps, turno, dosis, peso, primerPanal, preguntas] = await Promise.all([
+  const [feedings, diapers, sleeps, turno, dosis, peso, primerPanal, preguntas, ultimaToma] = await Promise.all([
     supabase.from("feedings").select("*").eq("baby_id", baby.id).gte("started_at", hace24).order("started_at", { ascending: false }).returns<Feeding[]>(),
     supabase.from("diapers").select("*").eq("baby_id", baby.id).gte("changed_at", hace24).order("changed_at", { ascending: false }).returns<Diaper[]>(),
     supabase.from("sleeps").select("*").eq("baby_id", baby.id).or(`ended_at.is.null,ended_at.gte.${hoy.toISOString()}`).order("started_at", { ascending: false }).returns<Sleep[]>(),
@@ -35,14 +35,11 @@ export default async function Inicio() {
     supabase.from("growth_records").select("*").eq("baby_id", baby.id).not("weight_g", "is", null).order("measured_on", { ascending: false }).limit(1).maybeSingle<Growth>(),
     supabase.from("diapers").select("changed_at").eq("baby_id", baby.id).order("changed_at").limit(1).maybeSingle<{ changed_at: string }>(),
     supabase.from("notes").select("id", { count: "exact", head: true }).eq("baby_id", baby.id).eq("for_doctor", true).eq("resolved", false),
+    supabase.from("feedings").select("*").eq("baby_id", baby.id).order("started_at", { ascending: false }).limit(1).returns<Feeding[]>(),
   ]);
 
   // Si la última toma es de hace más de 24 h, igual la mostramos.
-  let tomas = feedings.data ?? [];
-  if (!tomas.length) {
-    const { data } = await supabase.from("feedings").select("*").eq("baby_id", baby.id).order("started_at", { ascending: false }).limit(1).returns<Feeding[]>();
-    tomas = data ?? [];
-  }
+  const tomas = feedings.data?.length ? feedings.data : (ultimaToma.data ?? []);
   const enCurso = tomas.find((f) => !f.ended_at);
   const ultima = tomas[0];
   const promedio = intervaloPromedio(tomas);

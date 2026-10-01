@@ -5,28 +5,25 @@ import type { Baby } from "@/lib/types";
 
 export type Member = { family_id: string; role: "admin" | "miembro"; display_name: string };
 
-/** Usuario + familia + bebé. Una sola consulta por request. */
+/**
+ * Usuario + familia + bebé. La sesión se valida localmente (firma del JWT,
+ * sin ir al servidor de Auth) y familia y bebé se piden en paralelo: la RLS
+ * ya limita las bebés a la familia de quien consulta.
+ */
 export const getContext = cache(async () => {
   const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) redirect("/ingresar");
+  const { data: auth } = await supabase.auth.getClaims();
+  const claims = auth?.claims;
+  if (!claims?.sub) redirect("/ingresar");
+  const user = { id: claims.sub, email: (claims.email as string | undefined) ?? "" };
 
-  const { data: member } = await supabase
-    .from("family_members")
-    .select("family_id, role, display_name")
-    .eq("user_id", auth.user.id)
-    .maybeSingle<Member>();
+  const [{ data: member }, { data: baby }] = await Promise.all([
+    supabase.from("family_members").select("family_id, role, display_name").eq("user_id", user.id).maybeSingle<Member>(),
+    supabase.from("babies").select("*").order("created_at").limit(1).maybeSingle<Baby>(),
+  ]);
   if (!member) redirect("/ingresar?error=sin-familia");
 
-  const { data: baby } = await supabase
-    .from("babies")
-    .select("*")
-    .eq("family_id", member.family_id)
-    .order("created_at")
-    .limit(1)
-    .maybeSingle<Baby>();
-
-  return { supabase, user: auth.user, member, baby };
+  return { supabase, user, member, baby: baby && baby.family_id === member.family_id ? baby : null };
 });
 
 /** Igual que getContext pero exige que la bebé ya esté cargada. */
