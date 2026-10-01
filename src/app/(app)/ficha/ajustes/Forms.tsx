@@ -27,9 +27,27 @@ export function InvitarForm() {
       </div>
       <p className="text-[13px] text-faint">Un admin además puede invitar y quitar personas.</p>
       <FormError message={state?.error} />
-      {state?.ok && <p role="status" className="text-[14px] text-accent">Listo. Avisale que se registre con ese email.</p>}
+      {state?.ok && <p role="status" className="text-[14px] text-accent">Listo. Ahora mandale el link con el botón “Compartir” de abajo.</p>}
       <Submit className="btn-primary h-12 text-[15px]">Invitar</Submit>
     </form>
+  );
+}
+
+/** Comparte el link de registro con el email ya cargado (WhatsApp, Mensajes…). */
+export function CompartirInvitacion({ email }: { email: string }) {
+  function compartir() {
+    const url = `${window.location.origin}/crear-cuenta?email=${encodeURIComponent(email)}`;
+    const text = `Te sumé a Sofía para que veamos juntos las tomas, pañales y turnos. Creá tu cuenta con este email (${email}) acá:`;
+    if (navigator.share) {
+      navigator.share({ title: "Sofía", text, url }).catch(() => {});
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, "_blank", "noopener");
+    }
+  }
+  return (
+    <button type="button" onClick={compartir} className="h-9 shrink-0 rounded-full bg-accent px-3 text-[13px] font-semibold text-on-accent">
+      Compartir
+    </button>
   );
 }
 

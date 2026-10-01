@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { getContext } from "@/lib/session";
 import { salir } from "@/app/(auth)/actions";
 import { cancelarInvitacion, quitarMiembro } from "../actions";
-import { InvitarForm, MiNombreForm } from "./Forms";
+import { CompartirInvitacion, InvitarForm, MiNombreForm } from "./Forms";
 import { PushCelular, RecordatorioForm } from "./Recordatorio";
 
 export const metadata = { title: "Ajustes · Sofía" };
@@ -65,7 +65,7 @@ export default async function Page() {
           <h2 className="eyebrow mt-2">Dar de alta a alguien</h2>
           <div className="card flex flex-col gap-3 p-4">
             <p className="text-[14px] leading-relaxed text-muted">
-              Poné su email. Cuando se registre en Sofía con ese mismo email, entra directo a la familia y ve todo lo que ustedes cargan.
+              Poné su email y después mandale el link con “Compartir”. Cuando cree su cuenta con ese mismo email, entra directo a la familia y ve todo lo que ustedes cargan. La app no manda mails de invitación.
             </p>
             <InvitarForm />
             {(invitaciones.data ?? []).length > 0 && (
@@ -76,6 +76,7 @@ export default async function Page() {
                       <span className="text-[15px]">{i.email}</span>
                       <span className="text-[13px] text-muted">Esperando que se registre · {i.role === "admin" ? "Admin" : "Miembro"}</span>
                     </span>
+                    <CompartirInvitacion email={i.email} />
                     <DeleteButton action={cancelarInvitacion} fields={{ id: i.id }} pregunta={`¿Cancelar la invitación a ${i.email}?`} label="Cancelar invitación" />
                   </li>
                 ))}

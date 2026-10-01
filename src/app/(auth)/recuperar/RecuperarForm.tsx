@@ -13,7 +13,7 @@ export function RecuperarForm({ aviso }: { aviso?: string }) {
       <div className="card flex flex-col gap-2 p-5">
         <h2 className="display text-2xl">Revisá tu email</h2>
         <p className="text-[15px] leading-relaxed text-muted">
-          Si ese email tiene cuenta, te llegó un link para elegir una contraseña nueva. Abrilo en este mismo navegador.
+          Si ese email tiene cuenta, te llegó un link para elegir una contraseña nueva. Revisá también la carpeta de spam.
         </p>
         <Link href="/ingresar" className="btn-ghost mt-3">Volver</Link>
       </div>

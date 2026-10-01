@@ -6,7 +6,7 @@ import { registrarse } from "../actions";
 import { FormError } from "@/components/FormError";
 import { Submit } from "@/components/Submit";
 
-export function RegistroForm() {
+export function RegistroForm({ email }: { email?: string }) {
   const [state, action] = useActionState(registrarse, undefined);
 
   if (state?.ok) {
@@ -28,7 +28,7 @@ export function RegistroForm() {
       </label>
       <label className="flex flex-col gap-1.5">
         <span className="label">Email</span>
-        <input name="email" type="email" autoComplete="email" required className="input" />
+        <input name="email" type="email" autoComplete="email" required defaultValue={email} className="input" />
       </label>
       <label className="flex flex-col gap-1.5">
         <span className="label">Contraseña</span>
