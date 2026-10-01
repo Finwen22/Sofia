@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DeleteButton } from "@/components/DeleteButton";
 import { PageHeader } from "@/components/PageHeader";
 import { getContext } from "@/lib/session";
@@ -37,6 +38,7 @@ export default async function Page() {
         <div className="card flex flex-col gap-3 p-4">
           <p className="text-[14px] text-muted">{user.email}</p>
           <MiNombreForm nombre={member.display_name} />
+          <Link href="/nueva-clave" className="btn-ghost h-12 text-[15px]">Cambiar contraseña</Link>
         </div>
       </section>
 

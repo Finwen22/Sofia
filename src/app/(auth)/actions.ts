@@ -2,7 +2,9 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { createClient as createJsClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 import { str, type ActionState } from "@/lib/forms";
 
 export async function ingresar(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -50,12 +52,15 @@ export async function salir() {
 export async function recuperar(_: ActionState, fd: FormData): Promise<ActionState> {
   const email = str(fd, "email");
   if (!email) return { error: "Poné tu email." };
-  const supabase = await createClient();
+  // Flujo "implicit": el link trae la sesión en el #fragmento y funciona aunque
+  // el mail se abra en otro navegador (en iPhone, la app instalada y Safari
+  // no comparten cookies). Lo toma /auth/callback.
+  const supabase = createJsClient(SUPABASE_URL, SUPABASE_KEY, { auth: { flowType: "implicit", persistSession: false } });
   const h = await headers();
   const origin = h.get("origin") ?? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/confirm?next=/nueva-clave` });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/callback` });
   // Por seguridad no decimos si el email existe o no.
-  if (error && error.status === 429) return { error: "Pediste demasiados links seguidos. Esperá unos minutos." };
+  if (error && error.status === 429) return { error: "Supabase ya mandó demasiados mails esta hora. Probá de nuevo en una hora." };
   return { ok: true };
 }
 

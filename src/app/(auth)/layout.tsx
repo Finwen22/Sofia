@@ -1,3 +1,4 @@
+import { HashSession } from "@/components/HashSession";
 import { Orbs } from "@/components/Orbs";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -9,6 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span className="display text-5xl">Sofía</span>
           <p className="text-[15px] leading-relaxed text-muted">Tomas, pañales, sueño, turnos y vacunas, en un solo lugar y a un toque.</p>
         </div>
+        <HashSession />
         {children}
       </main>
     </div>
