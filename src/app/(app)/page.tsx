@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/Icon";
+import { LiveDuration } from "@/components/LiveDuration";
 import { LiveTimer } from "@/components/LiveTimer";
 import { requireBaby } from "@/lib/session";
 import { avisos, duracionToma, estadoVacunas, intervaloPromedio, minutosDeSueno, sesionesDeToma } from "@/lib/resumen";
@@ -122,7 +123,7 @@ export default async function Inicio() {
           </div>
           {ultima ? (
             <>
-              <span className="display text-[32px] leading-none">{haceCuanto(ultima.started_at, now)}</span>
+              <LiveDuration since={ultima.started_at} prefix="hace " inicial={haceCuanto(ultima.started_at, now)} className="display text-[32px] leading-none" />
               <span className="text-[15px]">{ladoTexto(ultima)}</span>
               {intervalo && proxima && (
                 <div className="flex flex-col gap-1.5">
@@ -152,11 +153,20 @@ export default async function Inicio() {
         </Link>
         <div className="card flex flex-col gap-1 p-4">
           <span className="label">Sueño hoy</span>
-          <span className="display text-[30px] leading-tight">{duracion(minutosDeSueno(suenos, hoy, now))}</span>
+          {durmiendo ? (
+            <LiveDuration
+              since={new Date(Math.max(new Date(durmiendo.started_at).getTime(), hoy.getTime())).toISOString()}
+              extraMin={minutosDeSueno(suenos.filter((z) => z.ended_at), hoy, now)}
+              inicial={duracion(minutosDeSueno(suenos, hoy, now))}
+              className="display text-[30px] leading-tight"
+            />
+          ) : (
+            <span className="display text-[30px] leading-tight">{duracion(minutosDeSueno(suenos, hoy, now))}</span>
+          )}
           {durmiendo ? (
             <form action={terminarSueno} className="flex items-center justify-between gap-2">
               <input type="hidden" name="id" value={durmiendo.id} />
-              <span className="text-[13px] text-muted">Duerme hace {duracion((now.getTime() - new Date(durmiendo.started_at).getTime()) / 60000)}</span>
+              <LiveDuration since={durmiendo.started_at} prefix="Duerme hace " inicial={`Duerme hace ${duracion((now.getTime() - new Date(durmiendo.started_at).getTime()) / 60000)}`} className="text-[13px] text-muted" />
               <button className="rounded-full bg-accent px-3 py-1.5 text-[13px] font-semibold text-on-accent">Despertó</button>
             </form>
           ) : (
