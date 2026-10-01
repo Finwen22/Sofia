@@ -7,6 +7,10 @@ import { avisos, duracionToma, estadoVacunas, intervaloPromedio, minutosDeSueno,
 import { duracion, edad, fechaCorta, fechaLarga, haceCuanto, hhmm, startOfTodayAR } from "@/lib/time";
 import type { Appointment, Diaper, Feeding, Growth, Sleep, VaccineDose } from "@/lib/types";
 import { terminarSueno, terminarToma, empezarSueno } from "./registrar/actions";
+import { cargarMedicamentos } from "./salud/medicamentos/datos";
+import { MedEstado } from "./salud/medicamentos/MedEstado";
+import { estadoMed } from "@/lib/medicamentos";
+import { toDateInput } from "@/lib/time";
 
 const ACCIONES: { href: string; label: string; icon: IconName }[] = [
   { href: "/registrar/toma", label: "Toma", icon: "bottle" },
@@ -27,7 +31,7 @@ export default async function Inicio() {
   const hace24 = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
   const hoy = startOfTodayAR(now);
 
-  const [feedings, diapers, sleeps, turno, dosis, peso, primerPanal, preguntas, ultimaToma] = await Promise.all([
+  const [feedings, diapers, sleeps, turno, dosis, peso, primerPanal, preguntas, ultimaToma, medicamentos] = await Promise.all([
     supabase.from("feedings").select("*").eq("baby_id", baby.id).gte("started_at", hace24).order("started_at", { ascending: false }).returns<Feeding[]>(),
     supabase.from("diapers").select("*").eq("baby_id", baby.id).gte("changed_at", hace24).order("changed_at", { ascending: false }).returns<Diaper[]>(),
     supabase.from("sleeps").select("*").eq("baby_id", baby.id).or(`ended_at.is.null,ended_at.gte.${hoy.toISOString()}`).order("started_at", { ascending: false }).returns<Sleep[]>(),
@@ -37,7 +41,18 @@ export default async function Inicio() {
     supabase.from("diapers").select("changed_at").eq("baby_id", baby.id).order("changed_at").limit(1).maybeSingle<{ changed_at: string }>(),
     supabase.from("notes").select("id", { count: "exact", head: true }).eq("baby_id", baby.id).eq("for_doctor", true).eq("resolved", false),
     supabase.from("feedings").select("*").eq("baby_id", baby.id).order("started_at", { ascending: false }).limit(1).returns<Feeding[]>(),
+    cargarMedicamentos(supabase, baby.id, baby.family_id),
   ]);
+  // En el inicio: los que tienen algo para hoy (pendientes primero). "Si hace falta" no aparece.
+  const hoyDia = toDateInput(now);
+  const medsHoy = medicamentos.meds
+    .filter((m) => m.kind !== "si_hace_falta" && hoyDia >= m.starts_on && (!m.ends_on || hoyDia <= m.ends_on))
+    .map((m) => {
+      const e = estadoMed(m, medicamentos.porMed(m.id), now);
+      const pendiente = e.kind === "diaria" ? e.pendiente : e.kind === "intervalo" ? e.atrasada : false;
+      return { m, pendiente };
+    })
+    .sort((a, b) => Number(b.pendiente) - Number(a.pendiente));
 
   // Si la última toma es de hace más de 24 h, igual la mostramos.
   const tomas = feedings.data?.length ? feedings.data : (ultimaToma.data ?? []);
@@ -177,6 +192,15 @@ export default async function Inicio() {
           )}
         </div>
       </div>
+
+      {medsHoy.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="eyebrow mt-1">Medicamentos de hoy</h2>
+          {medsHoy.map(({ m }) => (
+            <MedEstado key={m.id} med={m} doses={medicamentos.porMed(m.id)} nombres={medicamentos.nombres} compacto />
+          ))}
+        </section>
+      )}
 
       <Link href={turno.data ? `/salud/turnos/${turno.data.id}` : "/salud/turnos/nuevo"} className="card flex items-center gap-3.5 px-4 py-3.5">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-soft text-soft-ink">

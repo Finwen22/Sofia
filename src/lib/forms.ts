@@ -1,6 +1,6 @@
 import { fromLocalInput } from "@/lib/time";
 
-export type ActionState = { error?: string; ok?: boolean } | undefined;
+export type ActionState = { error?: string; ok?: boolean; aviso?: string } | undefined;
 
 export function str(fd: FormData, key: string): string | null {
   const v = fd.get(key);

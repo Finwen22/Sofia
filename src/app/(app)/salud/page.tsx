@@ -4,7 +4,7 @@ import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
 import { requireBaby } from "@/lib/session";
 import { estadoVacunas } from "@/lib/resumen";
-import { fechaCorta, fechaDia, hhmm } from "@/lib/time";
+import { fechaCorta, fechaDia, hhmm, toDateInput } from "@/lib/time";
 import type { Appointment, Growth, Note, VaccineDose } from "@/lib/types";
 import { borrarMedida, resolverPregunta } from "./actions";
 
@@ -33,13 +33,16 @@ function Agregar({ href, label }: { href: string; label: string }) {
 export default async function Page() {
   const { supabase, baby } = await requireBaby();
   const ahora = new Date().toISOString();
-  const [proximos, pasados, dosis, medidas, preguntas] = await Promise.all([
+  const [proximos, pasados, dosis, medidas, preguntas, medsRes] = await Promise.all([
     supabase.from("appointments").select("*").eq("baby_id", baby.id).eq("done", false).order("scheduled_at").returns<Appointment[]>(),
     supabase.from("appointments").select("*").eq("baby_id", baby.id).eq("done", true).order("scheduled_at", { ascending: false }).limit(5).returns<Appointment[]>(),
     supabase.from("vaccine_doses").select("*").eq("baby_id", baby.id).returns<VaccineDose[]>(),
     supabase.from("growth_records").select("*").eq("baby_id", baby.id).order("measured_on", { ascending: false }).returns<Growth[]>(),
     supabase.from("notes").select("*").eq("baby_id", baby.id).eq("for_doctor", true).eq("resolved", false).order("created_at").returns<Note[]>(),
+    supabase.from("medications").select("name, ends_on").eq("baby_id", baby.id).eq("active", true).returns<{ name: string; ends_on: string | null }[]>(),
   ]);
+  const hoyDia = toDateInput();
+  const meds = (medsRes.data ?? []).filter((m) => !m.ends_on || m.ends_on >= hoyDia);
 
   const vacunas = estadoVacunas(baby.birth_at, dosis.data ?? []);
   const atrasadas = vacunas.filter((v) => v.estado === "atrasada");
@@ -109,6 +112,19 @@ export default async function Page() {
             ))}
           </ul>
         )}
+      </Seccion>
+
+      <Seccion titulo="Medicamentos" accion={<Agregar href="/salud/medicamentos/nuevo" label="Medicamento" />}>
+        <Link href="/salud/medicamentos" className="card flex items-center gap-3.5 px-4 py-3.5">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-soft text-soft-ink">
+            <Icon name="pill" />
+          </span>
+          <span className="flex flex-1 flex-col gap-0.5">
+            <span className="text-[15px] font-semibold">{meds.length ? `${meds.length} en curso` : "Ninguno en curso"}</span>
+            <span className="text-[13px] text-muted">{meds.length ? meds.map((m) => m.name).join(", ") : "Vitamina D, hierro, antibióticos…"}</span>
+          </span>
+          <Icon name="chev" size={18} className="text-muted" />
+        </Link>
       </Seccion>
 
       <Seccion titulo="Vacunas">

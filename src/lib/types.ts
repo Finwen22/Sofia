@@ -81,3 +81,20 @@ export type ShoppingItem = {
   category: string;
   done: boolean;
 };
+
+export type Medication = {
+  id: string;
+  name: string;
+  dose: string | null;
+  kind: "diaria" | "intervalo" | "si_hace_falta";
+  times: string[]; // "09:00:00"
+  interval_hours: number | null;
+  starts_on: string;
+  ends_on: string | null;
+  reminders: boolean;
+  active: boolean;
+  prescribed_by: string | null;
+  notes: string | null;
+};
+
+export type MedicationDose = { id: string; medication_id: string; given_at: string; notes: string | null; created_by: string | null };
