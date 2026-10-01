@@ -14,7 +14,7 @@ declare
   a uuid := gen_random_uuid();
   b uuid := gen_random_uuid();
   c uuid := gen_random_uuid();
-  fam_a uuid; fam_b uuid; baby_a uuid; baby_b uuid; feed_a uuid;
+  fam_a uuid; fam_b uuid; baby_a uuid; baby_b uuid; feed_a uuid; med_a uuid;
   n int;
   total int := 0;
   fallas text[] := '{}';
@@ -34,6 +34,8 @@ begin
   insert into babies (family_id, first_name, birth_at) values (fam_b, 'BebeB', now() - interval '10 days') returning id into baby_b;
   insert into feedings (family_id, baby_id, kind, started_at, ended_at) values (fam_a, baby_a, 'pecho', now() - interval '1 hour', now()) returning id into feed_a;
   insert into shopping_items (family_id, name) values (fam_a, 'Pañales');
+  insert into medications (family_id, baby_id, name, kind, times) values (fam_a, baby_a, 'Vitamina D', 'diaria', '{09:00}') returning id into med_a;
+  insert into medication_doses (family_id, baby_id, medication_id) values (fam_a, baby_a, med_a);
   insert into push_subscriptions (family_id, user_id, endpoint, p256dh, auth) values (fam_a, a, 'https://push.test/' || a, 'k', 'x');
   insert into storage.objects (bucket_id, name, owner) values ('fotos', fam_a || '/panales/test.jpg', a);
 
@@ -81,6 +83,16 @@ begin
   if n <> 0 then fallas := fallas || 'B ve los celulares de A'; end if;
   total := total + 1; select count(*) into n from storage.objects where bucket_id = 'fotos' and name like fam_a || '/%';
   if n <> 0 then fallas := fallas || 'B ve las fotos de A'; end if;
+
+  total := total + 1; select count(*) into n from medications where family_id = fam_a;
+  if n <> 0 then fallas := fallas || 'B ve los medicamentos de A'; end if;
+  total := total + 1; select count(*) into n from medication_doses where family_id = fam_a;
+  if n <> 0 then fallas := fallas || 'B ve las dosis de A'; end if;
+  total := total + 1;
+  begin
+    insert into medication_doses (family_id, baby_id, medication_id) values (fam_b, baby_b, med_a);
+    fallas := fallas || 'B registró una dosis de un medicamento de A';
+  exception when others then null; end;
 
   total := total + 1; update babies set first_name = 'hackeado' where id = baby_a; get diagnostics n = row_count;
   if n <> 0 then fallas := fallas || 'B modificó la bebé de A'; end if;
