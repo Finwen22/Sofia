@@ -5,12 +5,18 @@ import { redirect } from "next/navigation";
 import { requireBaby } from "@/lib/session";
 import { bool, num, oneOf, str, when, type ActionState } from "@/lib/forms";
 import { COLORES, CONSISTENCIAS } from "@/lib/panal";
+import { toDateInput } from "@/lib/time";
 
 const LADOS = ["izquierdo", "derecho", "ambos"] as const;
 
-function listo() {
+function listo(volverA = "/") {
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect(volverA);
+}
+
+/** Al editar, vuelve al día del registro en la línea de tiempo. */
+function alDia(d: Date) {
+  return `/registro?dia=${toDateInput(d)}`;
 }
 
 /** Pecho con cronómetro: arranca ahora, se termina desde el inicio. */
@@ -62,19 +68,32 @@ export async function guardarPanal(_: ActionState, fd: FormData): Promise<Action
   const photo = str(fd, "photo_path");
   if (photo && !photo.startsWith(`${baby.family_id}/`)) return { error: "La foto no es válida." };
 
-  const { error } = await supabase.from("diapers").insert({
-    family_id: baby.family_id,
-    baby_id: baby.id,
-    changed_at: when(fd, "changed_at").toISOString(),
+  const id = str(fd, "id");
+  const changedAt = when(fd, "changed_at");
+  const row = {
+    changed_at: changedAt.toISOString(),
     pee,
     poop,
     poop_color: poop ? oneOf(str(fd, "poop_color"), COLORES.map((c) => c.code)) : null,
     consistency: poop ? oneOf(str(fd, "consistency"), CONSISTENCIAS.map((c) => c.code)) : null,
     notes: str(fd, "notes"),
-    photo_path: photo,
-  });
+  };
+
+  if (!id) {
+    const { error } = await supabase.from("diapers").insert({ ...row, family_id: baby.family_id, baby_id: baby.id, photo_path: photo });
+    if (error) return { error: "No se pudo guardar el pañal." };
+    listo();
+  }
+
+  // Edición: foto nueva reemplaza a la anterior; "quitar foto" la borra.
+  const { data: actual } = await supabase.from("diapers").select("photo_path").eq("id", id).eq("baby_id", baby.id).maybeSingle();
+  if (!actual) return { error: "Ese pañal ya no existe." };
+  const quitar = bool(fd, "quitar_foto");
+  const photo_path = photo ?? (quitar ? null : actual.photo_path);
+  const { error } = await supabase.from("diapers").update({ ...row, photo_path }).eq("id", id).eq("baby_id", baby.id);
   if (error) return { error: "No se pudo guardar el pañal." };
-  listo();
+  if (actual.photo_path && actual.photo_path !== photo_path) await supabase.storage.from("fotos").remove([actual.photo_path]);
+  listo(alDia(changedAt));
 }
 
 export async function empezarSueno() {
@@ -128,4 +147,63 @@ export async function borrarRegistro(fd: FormData) {
   }
   await supabase.from(tabla).delete().eq("id", id).eq("baby_id", baby.id);
   revalidatePath("/", "layout");
+}
+
+export async function editarToma(_: ActionState, fd: FormData): Promise<ActionState> {
+  const { supabase, baby } = await requireBaby();
+  const id = str(fd, "id");
+  const { data: t } = await supabase.from("feedings").select("kind, ended_at").eq("id", id ?? "").eq("baby_id", baby.id).maybeSingle();
+  if (!id || !t) return { error: "Esa toma ya no existe." };
+  const start = when(fd, "started_at");
+  if (start.getTime() > Date.now() + 60_000) return { error: "La hora no puede ser futura." };
+  const row: Record<string, unknown> = { started_at: start.toISOString(), notes: str(fd, "notes") };
+  if (t.kind === "pecho") {
+    row.side = oneOf(str(fd, "side"), LADOS);
+    const min = num(fd, "minutes");
+    // Una toma en curso sigue en curso si no le pusieron duración.
+    row.ended_at = min === null && !t.ended_at ? null : new Date(start.getTime() + (min ?? 0) * 60000).toISOString();
+  } else {
+    const ml = num(fd, "amount_ml");
+    if (!ml || ml < 1 || ml > 400) return { error: "Cargá cuántos ml tomó." };
+    row.amount_ml = ml;
+    row.milk = oneOf(str(fd, "milk"), ["materna", "formula"] as const);
+    row.ended_at = start.toISOString();
+  }
+  const { error } = await supabase.from("feedings").update(row).eq("id", id).eq("baby_id", baby.id);
+  if (error) return { error: "No se pudo guardar." };
+  listo(alDia(start));
+}
+
+export async function editarSueno(_: ActionState, fd: FormData): Promise<ActionState> {
+  const { supabase, baby } = await requireBaby();
+  const id = str(fd, "id");
+  if (!id) return { error: "Falta el registro." };
+  const start = when(fd, "started_at");
+  const fin = str(fd, "ended_at");
+  const end = fin ? when(fd, "ended_at") : null;
+  if (end && end <= start) return { error: "La hora en que se despertó tiene que ser posterior." };
+  const { error } = await supabase
+    .from("sleeps")
+    .update({ started_at: start.toISOString(), ended_at: end?.toISOString() ?? null })
+    .eq("id", id)
+    .eq("baby_id", baby.id);
+  if (error) return { error: "No se pudo guardar." };
+  listo(alDia(start));
+}
+
+export async function editarNota(_: ActionState, fd: FormData): Promise<ActionState> {
+  const { supabase, baby } = await requireBaby();
+  const id = str(fd, "id");
+  const body = str(fd, "body");
+  if (!id) return { error: "Falta el registro." };
+  if (!body) return { error: "Escribí la nota." };
+  const { data, error } = await supabase
+    .from("notes")
+    .update({ body, for_doctor: bool(fd, "for_doctor") })
+    .eq("id", id)
+    .eq("baby_id", baby.id)
+    .select("created_at")
+    .maybeSingle();
+  if (error || !data) return { error: "No se pudo guardar." };
+  listo(alDia(new Date(data.created_at)));
 }

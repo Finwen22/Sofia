@@ -11,6 +11,8 @@ import { DeleteButton } from "@/components/DeleteButton";
 
 export const metadata = { title: "Registro · Sofía" };
 
+const SLUG: Record<string, string> = { feedings: "toma", diapers: "panal", sleeps: "sueno", notes: "nota" };
+
 type Item = { at: string; tabla: string; id: string; icon: IconName; titulo: string; detalle?: string; foto?: string | null };
 
 function sumarDias(dia: string, n: number) {
@@ -75,6 +77,7 @@ export default async function Page({ searchParams }: PageProps<"/registro">) {
   return (
     <>
       <PageHeader eyebrow="Registro" title={dia === hoy ? "Hoy" : fechaLarga(desde)} />
+      <p className="-mt-2 text-[13px] text-faint">Tocá un registro para corregirlo.</p>
 
       <div className="flex items-center gap-2">
         <Link href={`/registro?dia=${sumarDias(dia, -1)}`} aria-label="Día anterior" className="flex size-11 items-center justify-center rounded-2xl border border-line bg-surface">
@@ -119,8 +122,10 @@ export default async function Page({ searchParams }: PageProps<"/registro">) {
                 <Icon name={it.icon} size={18} />
               </span>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="text-[15px] font-semibold">{it.titulo}</span>
-                {it.detalle && <span className="text-[14px] leading-snug text-muted">{it.detalle}</span>}
+                <Link href={`/registro/${SLUG[it.tabla]}/${it.id}`} className="flex flex-col gap-1">
+                  <span className="text-[15px] font-semibold">{it.titulo}</span>
+                  {it.detalle && <span className="text-[14px] leading-snug text-muted">{it.detalle}</span>}
+                </Link>
                 {it.foto && (
                   <a href={it.foto} target="_blank" rel="noreferrer" className="mt-1 block w-28 overflow-hidden rounded-xl border border-line">
                     {/* eslint-disable-next-line @next/next/no-img-element */}

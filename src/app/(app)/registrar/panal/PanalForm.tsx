@@ -7,13 +7,17 @@ import { Icon } from "@/components/Icon";
 import { Submit } from "@/components/Submit";
 import { COLORES, CONSISTENCIAS, avisoColor } from "@/lib/panal";
 import { subirFoto } from "@/lib/foto";
+import type { Diaper } from "@/lib/types";
 
-export function PanalForm({ familyId, ahora, diasDeVida }: { familyId: string; ahora: string; diasDeVida: number }) {
+type Props = { familyId: string; ahora: string; diasDeVida: number; panal?: Diaper; fotoUrl?: string | null };
+
+export function PanalForm({ familyId, ahora, diasDeVida, panal, fotoUrl }: Props) {
   const [state, dispatch] = useActionState(guardarPanal, undefined);
-  const [pee, setPee] = useState(true);
-  const [poop, setPoop] = useState(false);
-  const [color, setColor] = useState<string | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [pee, setPee] = useState(panal ? panal.pee : true);
+  const [poop, setPoop] = useState(panal?.poop ?? false);
+  const [color, setColor] = useState<string | null>(panal?.poop_color ?? null);
+  const [preview, setPreview] = useState<string | null>(fotoUrl ?? null);
+  const [quitar, setQuitar] = useState(false);
   const [errorFoto, setErrorFoto] = useState<string>();
 
   const aviso = poop ? avisoColor(color, diasDeVida) : null;
@@ -36,6 +40,8 @@ export function PanalForm({ familyId, ahora, diasDeVida }: { familyId: string; a
 
   return (
     <form action={enviar} className="flex flex-col gap-5">
+      {panal && <input type="hidden" name="id" value={panal.id} />}
+      {quitar && <input type="hidden" name="quitar_foto" value="1" />}
       <label className="flex flex-col gap-1.5">
         <span className="label">Hora</span>
         <input name="changed_at" type="datetime-local" defaultValue={ahora} className="input" />
@@ -80,7 +86,7 @@ export function PanalForm({ familyId, ahora, diasDeVida }: { familyId: string; a
             <div className="flex flex-wrap gap-2">
               {CONSISTENCIAS.map((c) => (
                 <label key={c.code} className="opt px-4">
-                  <input type="radio" name="consistency" value={c.code} className="sr-only" />
+                  <input type="radio" name="consistency" value={c.code} defaultChecked={panal?.consistency === c.code} className="sr-only" />
                   {c.label}
                 </label>
               ))}
@@ -101,6 +107,7 @@ export function PanalForm({ familyId, ahora, diasDeVida }: { familyId: string; a
             onChange={(e) => {
               const f = e.target.files?.[0];
               setPreview(f ? URL.createObjectURL(f) : null);
+              setQuitar(false);
             }}
           />
           {preview ? (
@@ -112,16 +119,23 @@ export function PanalForm({ familyId, ahora, diasDeVida }: { familyId: string; a
             </>
           )}
         </label>
-        <span className="text-[13px] text-faint">Queda privada: solo la ven ustedes dos.</span>
+        <span className="flex items-center justify-between text-[13px] text-faint">
+          Queda privada: solo la ven ustedes dos.
+          {panal?.photo_path && preview && (
+            <button type="button" onClick={() => { setQuitar(true); setPreview(null); }} className="px-2 py-1 font-semibold text-alert">
+              Quitar foto
+            </button>
+          )}
+        </span>
       </div>
 
       <label className="flex flex-col gap-1.5">
         <span className="label">Detalles observados</span>
-        <textarea name="notes" rows={2} placeholder="Opcional: paspadura, olor, mucosidad…" className="input" />
+        <textarea name="notes" rows={2} defaultValue={panal?.notes ?? ""} placeholder="Opcional: paspadura, olor, mucosidad…" className="input" />
       </label>
 
       <FormError message={errorFoto ?? state?.error} />
-      <Submit>Guardar pañal</Submit>
+      <Submit>{panal ? "Guardar cambios" : "Guardar pañal"}</Submit>
     </form>
   );
 }
