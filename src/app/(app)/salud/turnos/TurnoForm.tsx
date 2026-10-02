@@ -52,7 +52,7 @@ export function TurnoForm({ turno, fechaInicial, pediatra }: { turno?: Appointme
       {turno && (
         <>
           <label className="opt justify-start px-4">
-            <input type="checkbox" name="done" checked={hecho} onChange={(e) => setHecho(e.target.checked)} className="size-5 accent-[#d8b389]" />
+            <input type="checkbox" name="done" checked={hecho} onChange={(e) => setHecho(e.target.checked)} className="size-5 accent-accent" />
             Ya fuimos
           </label>
           {hecho && (

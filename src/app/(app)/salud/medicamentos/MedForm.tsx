@@ -105,7 +105,7 @@ export function MedForm({ med, hoy }: { med?: Medication; hoy: string }) {
       {kind !== "si_hace_falta" && (
         <label className="opt justify-between px-4">
           <span>Avisarnos por notificación cuando toca</span>
-          <input type="checkbox" name="reminders" defaultChecked={med?.reminders ?? true} className="size-5 accent-[#d8b389]" />
+          <input type="checkbox" name="reminders" defaultChecked={med?.reminders ?? true} className="size-5 accent-accent" />
         </label>
       )}
 

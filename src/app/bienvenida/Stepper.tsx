@@ -137,10 +137,10 @@ export function Stepper({ nombre }: { nombre: string }) {
           <fieldset className="flex flex-col gap-2">
             <legend className="label mb-2">Vacunas que recibió en la maternidad</legend>
             <label className="opt justify-start px-4">
-              <input type="checkbox" name="vac_bcg" className="size-5 accent-[#d8b389]" /> BCG
+              <input type="checkbox" name="vac_bcg" className="size-5 accent-accent" /> BCG
             </label>
             <label className="opt justify-start px-4">
-              <input type="checkbox" name="vac_hb-rn" className="size-5 accent-[#d8b389]" /> Hepatitis B
+              <input type="checkbox" name="vac_hb-rn" className="size-5 accent-accent" /> Hepatitis B
             </label>
           </fieldset>
           <SiNo name="neonatal_screening" label="¿Le hicieron la pesquisa neonatal (prueba del talón)?" />

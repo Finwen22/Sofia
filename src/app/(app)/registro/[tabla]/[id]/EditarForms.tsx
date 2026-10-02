@@ -96,7 +96,7 @@ export function EditarNota({ nota }: { nota: Note }) {
         <textarea name="body" rows={5} required defaultValue={nota.body} className="input" />
       </Campo>
       <label className="opt justify-start px-4">
-        <input type="checkbox" name="for_doctor" defaultChecked={nota.for_doctor} className="size-5 accent-[#d8b389]" />
+        <input type="checkbox" name="for_doctor" defaultChecked={nota.for_doctor} className="size-5 accent-accent" />
         Es una pregunta para el próximo control
       </label>
       <FormError message={state?.error} />

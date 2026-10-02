@@ -6,6 +6,8 @@ import { salir } from "@/app/(auth)/actions";
 import { cancelarInvitacion, quitarMiembro } from "../actions";
 import { CompartirInvitacion, InvitarForm, MiNombreForm } from "./Forms";
 import { PushCelular, RecordatorioForm } from "./Recordatorio";
+import { Colores } from "./Colores";
+import { temaValido } from "@/lib/temas";
 
 export const metadata = { title: "Ajustes · Sofía" };
 
@@ -30,6 +32,13 @@ export default async function Page() {
           <div className="border-t border-line pt-4">
             <PushCelular />
           </div>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="eyebrow mt-2">Color de la app</h2>
+        <div className="card p-4">
+          <Colores actual={temaValido(member.theme)} />
         </div>
       </section>
 

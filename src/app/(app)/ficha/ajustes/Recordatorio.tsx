@@ -19,7 +19,7 @@ export function RecordatorioForm({ activo, intervalo, antes }: { activo: boolean
     <form action={action} className="flex flex-col gap-3">
       <label className="opt justify-between px-4">
         <span>Avisarme antes de la próxima toma</span>
-        <input type="checkbox" name="activo" checked={on} onChange={(e) => setOn(e.target.checked)} className="size-5 accent-[#d8b389]" />
+        <input type="checkbox" name="activo" checked={on} onChange={(e) => setOn(e.target.checked)} className="size-5 accent-accent" />
       </label>
       <fieldset className="flex flex-col gap-2" disabled={!on}>
         <legend className="label mb-2">Toma cada</legend>

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Baby } from "@/lib/types";
 
-export type Member = { family_id: string; role: "admin" | "miembro"; display_name: string };
+export type Member = { family_id: string; role: "admin" | "miembro"; display_name: string; theme: string };
 
 /**
  * Usuario + familia + bebé. La sesión se valida localmente (firma del JWT,
@@ -18,7 +18,7 @@ export const getContext = cache(async () => {
   const user = { id: claims.sub, email: (claims.email as string | undefined) ?? "" };
 
   const [{ data: member }, { data: baby }] = await Promise.all([
-    supabase.from("family_members").select("family_id, role, display_name").eq("user_id", user.id).maybeSingle<Member>(),
+    supabase.from("family_members").select("*").eq("user_id", user.id).maybeSingle<Member>(),
     supabase.from("babies").select("*").order("created_at").limit(1).maybeSingle<Baby>(),
   ]);
   if (!member) redirect("/ingresar?error=sin-familia");

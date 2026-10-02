@@ -6,6 +6,8 @@ import { getContext, requireBaby } from "@/lib/session";
 import { dec, num, oneOf, str, triBool, type ActionState } from "@/lib/forms";
 import { fromLocalInput } from "@/lib/time";
 import { sendPush } from "@/lib/push";
+import { cookies } from "next/headers";
+import { TEMAS } from "@/lib/temas";
 
 export async function editarFicha(_: ActionState, fd: FormData): Promise<ActionState> {
   const { supabase, baby } = await requireBaby();
@@ -125,4 +127,14 @@ export async function probarPush(): Promise<ActionState> {
   const gone = await sendPush(data, { title: "Sofía", body: "Así te va a llegar el aviso de la próxima toma.", url: "/", tag: "prueba" });
   if (gone.length) await supabase.from("push_subscriptions").delete().in("endpoint", gone);
   return gone.length === data.length ? { error: "El celular dio de baja las notificaciones. Volvé a activarlas." } : { ok: true };
+}
+
+/** Color de la app: es de cada persona (no de la familia). */
+export async function guardarTema(tema: string): Promise<ActionState> {
+  const { supabase, member, user } = await getContext();
+  if (!TEMAS.some((t) => t.code === tema)) return { error: "Ese color no existe." };
+  const { error } = await supabase.from("family_members").update({ theme: tema }).eq("family_id", member.family_id).eq("user_id", user.id);
+  if (error) return { error: "No se pudo guardar el color." };
+  (await cookies()).set("tema", tema, { path: "/", maxAge: 31536000, sameSite: "lax" });
+  return { ok: true };
 }

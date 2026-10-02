@@ -14,7 +14,7 @@ export function NotaForm({ paraPediatra }: { paraPediatra: boolean }) {
         <textarea name="body" rows={5} required autoFocus placeholder="Ej.: hipo después de cada toma, ¿es normal?" className="input" />
       </label>
       <label className="opt justify-start px-4">
-        <input type="checkbox" name="for_doctor" defaultChecked={paraPediatra} className="size-5 accent-[#d8b389]" />
+        <input type="checkbox" name="for_doctor" defaultChecked={paraPediatra} className="size-5 accent-accent" />
         Es una pregunta para el próximo control
       </label>
       <FormError message={state?.error} />

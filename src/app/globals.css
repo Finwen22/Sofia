@@ -8,7 +8,7 @@
   --color-line: #3f352d;
   --color-ink: #f0e6d8;
   --color-muted: #b9aa97;
-  --color-faint: #958671;
+  --color-faint: #a19280;
   --color-accent: #d8b389;
   --color-on-accent: #2a211a;
   --color-soft: #3a2f26;
@@ -82,9 +82,9 @@ body {
   pointer-events: none;
   background: radial-gradient(
     circle,
-    rgba(240, 200, 150, 0.55) 0%,
-    rgba(214, 160, 100, 0.22) 38%,
-    rgba(214, 160, 100, 0) 70%
+    color-mix(in srgb, var(--color-accent) 60%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent) 22%, transparent) 38%,
+    transparent 70%
   );
   animation-name: orb-drift, orb-glow;
   animation-timing-function: ease-in-out, ease-in-out;
@@ -106,7 +106,8 @@ body {
 
 /* Impresión / PDF (resumen para el pediatra): papel claro, sin animaciones. */
 @media print {
-  :root {
+  :root,
+  :root[data-tema] {
     --color-bg: #ffffff;
     --color-surface: #ffffff;
     --color-surface-2: #ffffff;

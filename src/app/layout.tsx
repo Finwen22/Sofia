@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
+import { colorFondo, cssTemas, temaValido } from "@/lib/temas";
 import { Nunito } from "next/font/google";
 import "./globals.css";
 
@@ -11,16 +13,27 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#221d19",
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
+async function temaActual() {
+  return temaValido((await cookies()).get("tema")?.value);
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export async function generateViewport(): Promise<Viewport> {
+  return {
+    themeColor: colorFondo(await temaActual()),
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  };
+}
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const tema = await temaActual();
   return (
-    <html lang="es-AR" className={`${nunito.variable} h-full antialiased`}>
+    <html lang="es-AR" data-tema={tema} className={`${nunito.variable} h-full antialiased`}>
+      <head>
+        {/* Colores de cada combinación (el tema elegido va en data-tema). */}
+        <style>{cssTemas()}</style>
+      </head>
       <body className="min-h-dvh">{children}</body>
     </html>
   );
