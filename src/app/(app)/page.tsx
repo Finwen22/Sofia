@@ -6,7 +6,7 @@ import { requireBaby } from "@/lib/session";
 import { avisos, duracionToma, estadoVacunas, intervaloPromedio, minutosDeSueno, sesionesDeToma } from "@/lib/resumen";
 import { duracion, edad, fechaCorta, fechaLarga, haceCuanto, hhmm, startOfTodayAR } from "@/lib/time";
 import type { Appointment, Diaper, Feeding, Growth, Sleep, VaccineDose } from "@/lib/types";
-import { terminarSueno, terminarToma, empezarSueno } from "./registrar/actions";
+import { terminarSueno, terminarToma, empezarSueno, sigueDurmiendo } from "./registrar/actions";
 import { cargarMedicamentos } from "./salud/medicamentos/datos";
 import { MedEstado } from "./salud/medicamentos/MedEstado";
 import { estadoMed } from "@/lib/medicamentos";
@@ -25,8 +25,9 @@ function ladoTexto(f: Feeding) {
   return f.ended_at ? `${lado} · ${duracion(duracionToma(f))}` : lado;
 }
 
-export default async function Inicio() {
+export default async function Inicio({ searchParams }: PageProps<"/">) {
   const { supabase, baby } = await requireBaby();
+  const { sueno: suenoCortado, por } = await searchParams;
   const now = new Date();
   const hace24 = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
   const hoy = startOfTodayAR(now);
@@ -70,6 +71,8 @@ export default async function Inicio() {
   const panalesHoy = panales.filter((d) => new Date(d.changed_at) >= hoy);
   const suenos = sleeps.data ?? [];
   const durmiendo = suenos.find((s) => !s.ended_at);
+  // Recién se cortó un sueño por una toma o un pañal: ofrecer deshacerlo.
+  const cortado = !durmiendo && typeof suenoCortado === "string" ? suenos.find((z) => z.id === suenoCortado && z.ended_at) : undefined;
   const vacunas = estadoVacunas(baby.birth_at, dosis.data ?? [], now);
   const proximaVacuna = vacunas.find((v) => v.estado !== "aplicada");
   const lista = avisos({ birthAt: baby.birth_at, feedings: tomas, diapers24: panales, primerPanal: primerPanal.data?.changed_at ?? null, vacunas, now });
@@ -103,6 +106,27 @@ export default async function Inicio() {
           </Link>
         ))}
       </div>
+
+      {cortado && (
+        <section className="card flex flex-col gap-3 border-accent/60 p-4">
+          <p className="flex items-start gap-2.5 text-[15px] leading-snug">
+            <Icon name="moon" size={20} className="mt-0.5 shrink-0 text-accent" />
+            <span>
+              Cortamos el sueño a las {hhmm(cortado.ended_at!)} por {por === "panal" ? "el cambio de pañal" : "la toma"} (durmió{" "}
+              {duracion((new Date(cortado.ended_at!).getTime() - new Date(cortado.started_at).getTime()) / 60000)}).
+            </span>
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Link href="/" replace className="flex h-11 items-center justify-center rounded-2xl border border-line text-[15px] font-semibold">
+              Se despertó
+            </Link>
+            <form action={sigueDurmiendo}>
+              <input type="hidden" name="id" value={cortado.id} />
+              <button className="h-11 w-full rounded-2xl bg-accent text-[15px] font-semibold text-on-accent">Sigue durmiendo</button>
+            </form>
+          </div>
+        </section>
+      )}
 
       {lista.map((a, i) => {
         const cuerpo = (

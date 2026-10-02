@@ -14,6 +14,24 @@ function listo(volverA = "/") {
   redirect(volverA);
 }
 
+type Supa = Awaited<ReturnType<typeof requireBaby>>["supabase"];
+
+/**
+ * Si estaba durmiendo, una toma o un cambio de pañal casi siempre la despierta:
+ * se cierra el sueño a esa hora. El inicio ofrece "Sigue durmiendo" para
+ * deshacerlo (toma dormida, cambio de noche). Devuelve a dónde volver.
+ */
+async function cortarSueno(supabase: Supa, babyId: string, at: Date, motivo: "toma" | "panal") {
+  const { data } = await supabase
+    .from("sleeps")
+    .update({ ended_at: at.toISOString() })
+    .eq("baby_id", babyId)
+    .is("ended_at", null)
+    .lte("started_at", at.toISOString())
+    .select("id");
+  return data?.length ? `/?sueno=${data[0].id}&por=${motivo}` : "/";
+}
+
 /** Al editar, vuelve al día del registro en la línea de tiempo. */
 function alDia(d: Date) {
   return `/registro?dia=${toDateInput(d)}`;
@@ -26,7 +44,7 @@ export async function empezarToma(fd: FormData) {
   // Si había otra toma abierta, se cierra ahora (cambio de pecho).
   await supabase.from("feedings").update({ ended_at: new Date().toISOString() }).eq("baby_id", baby.id).is("ended_at", null);
   await supabase.from("feedings").insert({ family_id: baby.family_id, baby_id: baby.id, kind: "pecho", side });
-  listo();
+  listo(await cortarSueno(supabase, baby.id, new Date(), "toma"));
 }
 
 export async function terminarToma(fd: FormData) {
@@ -57,7 +75,7 @@ export async function guardarToma(_: ActionState, fd: FormData): Promise<ActionS
   }
   const { error } = await supabase.from("feedings").insert(row);
   if (error) return { error: "No se pudo guardar la toma." };
-  listo();
+  listo(await cortarSueno(supabase, baby.id, start, "toma"));
 }
 
 export async function guardarPanal(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -82,7 +100,7 @@ export async function guardarPanal(_: ActionState, fd: FormData): Promise<Action
   if (!id) {
     const { error } = await supabase.from("diapers").insert({ ...row, family_id: baby.family_id, baby_id: baby.id, photo_path: photo });
     if (error) return { error: "No se pudo guardar el pañal." };
-    listo();
+    listo(await cortarSueno(supabase, baby.id, changedAt, "panal"));
   }
 
   // Edición: foto nueva reemplaza a la anterior; "quitar foto" la borra.
@@ -206,4 +224,15 @@ export async function editarNota(_: ActionState, fd: FormData): Promise<ActionSt
     .maybeSingle();
   if (error || !data) return { error: "No se pudo guardar." };
   listo(alDia(new Date(data.created_at)));
+}
+
+/** Deshace el corte automático: el sueño sigue en curso. */
+export async function sigueDurmiendo(fd: FormData) {
+  const { supabase, baby } = await requireBaby();
+  const id = str(fd, "id");
+  if (id) {
+    const { data: abierto } = await supabase.from("sleeps").select("id").eq("baby_id", baby.id).is("ended_at", null).limit(1);
+    if (!abierto?.length) await supabase.from("sleeps").update({ ended_at: null }).eq("id", id).eq("baby_id", baby.id);
+  }
+  listo();
 }
