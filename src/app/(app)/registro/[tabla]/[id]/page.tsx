@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { requireBaby } from "@/lib/session";
 import { diasDesde, toDateInput, toLocalInput } from "@/lib/time";
-import type { Diaper, Feeding, Note, Sleep } from "@/lib/types";
+import type { Diaper, Feeding, HealthLog, Note, Sleep } from "@/lib/types";
+import { TempForm } from "../../../registrar/temperatura/TempForm";
 import { PanalForm } from "../../../registrar/panal/PanalForm";
 import { EditarNota, EditarSueno, EditarToma } from "./EditarForms";
 
@@ -57,6 +58,17 @@ export default async function Page({ params }: PageProps<"/registro/[tabla]/[id]
       <>
         <PageHeader eyebrow="Editar" title="Nota" back={volver(n.created_at)} />
         <EditarNota nota={n} />
+      </>
+    );
+  }
+
+  if (tabla === "salud") {
+    const { data: x } = await supabase.from("health_logs").select("*").eq("id", id).eq("baby_id", baby.id).maybeSingle<HealthLog>();
+    if (!x) notFound();
+    return (
+      <>
+        <PageHeader eyebrow="Editar" title="Temperatura y síntomas" back={volver(x.observed_at)} />
+        <TempForm ahora={local(x.observed_at)} diasDeVida={diasDesde(baby.birth_at, new Date(x.observed_at))} registro={x} telPediatra={baby.pediatrician_phone} />
       </>
     );
   }

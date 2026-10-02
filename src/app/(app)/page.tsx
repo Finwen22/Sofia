@@ -4,8 +4,9 @@ import { LiveDuration } from "@/components/LiveDuration";
 import { LiveTimer } from "@/components/LiveTimer";
 import { requireBaby } from "@/lib/session";
 import { avisos, duracionToma, estadoVacunas, intervaloPromedio, minutosDeSueno, sesionesDeToma } from "@/lib/resumen";
-import { duracion, edad, fechaCorta, fechaLarga, haceCuanto, hhmm, startOfTodayAR } from "@/lib/time";
-import type { Appointment, Diaper, Feeding, Growth, Sleep, VaccineDose } from "@/lib/types";
+import { diasDesde, duracion, edad, fechaCorta, fechaLarga, haceCuanto, hhmm, startOfTodayAR } from "@/lib/time";
+import type { Appointment, Diaper, Feeding, Growth, HealthLog, Sleep, VaccineDose } from "@/lib/types";
+import { evaluar, formatoTemp } from "@/lib/sintomas";
 import { terminarSueno, terminarToma, empezarSueno, sigueDurmiendo } from "./registrar/actions";
 import { cargarMedicamentos } from "./salud/medicamentos/datos";
 import { MedEstado } from "./salud/medicamentos/MedEstado";
@@ -16,6 +17,7 @@ const ACCIONES: { href: string; label: string; icon: IconName }[] = [
   { href: "/registrar/toma", label: "Toma", icon: "bottle" },
   { href: "/registrar/panal", label: "Pañal", icon: "diaper" },
   { href: "/registrar/sueno", label: "Sueño", icon: "moon" },
+  { href: "/registrar/temperatura", label: "Temp.", icon: "thermo" },
   { href: "/registrar/nota", label: "Nota", icon: "note" },
 ];
 
@@ -32,7 +34,7 @@ export default async function Inicio({ searchParams }: PageProps<"/">) {
   const hace24 = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
   const hoy = startOfTodayAR(now);
 
-  const [feedings, diapers, sleeps, turno, dosis, peso, primerPanal, preguntas, ultimaToma, medicamentos] = await Promise.all([
+  const [feedings, diapers, sleeps, turno, dosis, peso, primerPanal, preguntas, ultimaToma, medicamentos, salud] = await Promise.all([
     supabase.from("feedings").select("*").eq("baby_id", baby.id).gte("started_at", hace24).order("started_at", { ascending: false }).returns<Feeding[]>(),
     supabase.from("diapers").select("*").eq("baby_id", baby.id).gte("changed_at", hace24).order("changed_at", { ascending: false }).returns<Diaper[]>(),
     supabase.from("sleeps").select("*").eq("baby_id", baby.id).or(`ended_at.is.null,ended_at.gte.${hoy.toISOString()}`).order("started_at", { ascending: false }).returns<Sleep[]>(),
@@ -43,7 +45,11 @@ export default async function Inicio({ searchParams }: PageProps<"/">) {
     supabase.from("notes").select("id", { count: "exact", head: true }).eq("baby_id", baby.id).eq("for_doctor", true).eq("resolved", false),
     supabase.from("feedings").select("*").eq("baby_id", baby.id).order("started_at", { ascending: false }).limit(1).returns<Feeding[]>(),
     cargarMedicamentos(supabase, baby.id, baby.family_id),
+    supabase.from("health_logs").select("*").eq("baby_id", baby.id).gte("observed_at", new Date(now.getTime() - 12 * 3600_000).toISOString()).order("observed_at", { ascending: false }).limit(1).returns<HealthLog[]>(),
   ]);
+  // Última temperatura/síntomas de las últimas 12 h, si hay algo que mirar.
+  const ultimoSalud = salud.data?.[0];
+  const evSalud = ultimoSalud ? evaluar(ultimoSalud.temperature_c, ultimoSalud.symptoms, diasDesde(baby.birth_at, new Date(ultimoSalud.observed_at))) : null;
   // En el inicio: los que tienen algo para hoy (pendientes primero). "Si hace falta" no aparece.
   const hoyDia = toDateInput(now);
   const medsHoy = medicamentos.meds
@@ -94,18 +100,33 @@ export default async function Inicio({ searchParams }: PageProps<"/">) {
         </Link>
       </header>
 
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-5 gap-2">
         {ACCIONES.map((a, i) => (
           <Link
             key={a.href}
             href={a.href}
-            className={`flex h-[78px] flex-col items-center justify-center gap-1.5 rounded-[20px] text-sm font-semibold ${i === 0 ? "bg-accent text-on-accent" : "border border-line bg-surface text-ink"}`}
+            className={`flex h-[74px] flex-col items-center justify-center gap-1.5 rounded-[18px] text-[13px] font-semibold ${i === 0 ? "bg-accent text-on-accent" : "border border-line bg-surface text-ink"}`}
           >
             <Icon name={a.icon} size={24} />
             {a.label}
           </Link>
         ))}
       </div>
+
+      {ultimoSalud && evSalud && evSalud.nivel !== "ok" && (
+        <Link
+          href="/registrar/temperatura"
+          className={`flex items-start gap-2.5 rounded-[20px] px-4 py-3 text-[14px] leading-snug ${evSalud.nivel === "atencion" ? "bg-soft text-soft-ink" : "bg-alert-bg text-alert"}`}
+        >
+          <Icon name="thermo" size={18} className="mt-0.5 shrink-0" />
+          <span className="flex-1">
+            <strong>
+              {ultimoSalud.temperature_c !== null ? `${formatoTemp(ultimoSalud.temperature_c)} a las ${hhmm(ultimoSalud.observed_at)}` : `${evSalud.titulo} (${hhmm(ultimoSalud.observed_at)})`}.
+            </strong>{" "}
+            {evSalud.texto} Tocá para volver a medir.
+          </span>
+        </Link>
+      )}
 
       {cortado && (
         <section className="card flex flex-col gap-3 border-accent/60 p-4">

@@ -5,7 +5,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { requireBaby } from "@/lib/session";
 import { estadoVacunas } from "@/lib/resumen";
 import { fechaCorta, fechaDia, hhmm, toDateInput } from "@/lib/time";
-import type { Appointment, Growth, Note, VaccineDose } from "@/lib/types";
+import type { Appointment, Growth, HealthLog, Note, VaccineDose } from "@/lib/types";
+import { etiquetaSintoma, formatoTemp } from "@/lib/sintomas";
 import { borrarMedida, resolverPregunta } from "./actions";
 
 export const metadata = { title: "Salud · Sofía" };
@@ -33,13 +34,14 @@ function Agregar({ href, label }: { href: string; label: string }) {
 export default async function Page() {
   const { supabase, baby } = await requireBaby();
   const ahora = new Date().toISOString();
-  const [proximos, pasados, dosis, medidas, preguntas, medsRes] = await Promise.all([
+  const [proximos, pasados, dosis, medidas, preguntas, medsRes, saludRes] = await Promise.all([
     supabase.from("appointments").select("*").eq("baby_id", baby.id).eq("done", false).order("scheduled_at").returns<Appointment[]>(),
     supabase.from("appointments").select("*").eq("baby_id", baby.id).eq("done", true).order("scheduled_at", { ascending: false }).limit(5).returns<Appointment[]>(),
     supabase.from("vaccine_doses").select("*").eq("baby_id", baby.id).returns<VaccineDose[]>(),
     supabase.from("growth_records").select("*").eq("baby_id", baby.id).order("measured_on", { ascending: false }).returns<Growth[]>(),
     supabase.from("notes").select("*").eq("baby_id", baby.id).eq("for_doctor", true).eq("resolved", false).order("created_at").returns<Note[]>(),
     supabase.from("medications").select("name, ends_on").eq("baby_id", baby.id).eq("active", true).returns<{ name: string; ends_on: string | null }[]>(),
+    supabase.from("health_logs").select("*").eq("baby_id", baby.id).gte("observed_at", new Date(new Date().getTime() - 7 * 86400_000).toISOString()).order("observed_at", { ascending: false }).limit(6).returns<HealthLog[]>(),
   ]);
   const hoyDia = toDateInput();
   const meds = (medsRes.data ?? []).filter((m) => !m.ends_on || m.ends_on >= hoyDia);
@@ -118,6 +120,29 @@ export default async function Page() {
                     <Icon name="check" size={20} stroke={2} />
                   </button>
                 </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Seccion>
+
+      <Seccion titulo="Temperatura y síntomas" accion={<Agregar href="/registrar/temperatura" label="Medir" />}>
+        {(saludRes.data ?? []).length === 0 ? (
+          <p className="text-[15px] text-muted">Nada en los últimos 7 días.</p>
+        ) : (
+          <ul className="card px-4">
+            {(saludRes.data ?? []).map((x) => (
+              <li key={x.id}>
+                <Link href={`/registro/salud/${x.id}`} className="flex items-center gap-3 border-b border-line py-2.5">
+                  <span className="flex flex-1 flex-col gap-0.5">
+                    <span className="text-[15px] font-semibold">{x.temperature_c !== null ? formatoTemp(x.temperature_c) : "Síntomas"}</span>
+                    <span className="text-[13px] text-muted">
+                      {fechaCorta(x.observed_at)} {hhmm(x.observed_at)}
+                      {x.symptoms.length ? ` · ${x.symptoms.map(etiquetaSintoma).join(", ")}` : ""}
+                    </span>
+                  </span>
+                  <Icon name="chev" size={18} className="text-muted" />
+                </Link>
               </li>
             ))}
           </ul>

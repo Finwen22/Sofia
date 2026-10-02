@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBaby } from "@/lib/session";
-import { bool, num, oneOf, str, when, type ActionState } from "@/lib/forms";
+import { bool, dec, num, oneOf, str, when, type ActionState } from "@/lib/forms";
 import { COLORES, CONSISTENCIAS } from "@/lib/panal";
-import { toDateInput } from "@/lib/time";
+import { hhmm, toDateInput } from "@/lib/time";
+import { METODOS, SINTOMAS, formatoTemp } from "@/lib/sintomas";
 
 const LADOS = ["izquierdo", "derecho", "ambos"] as const;
 
@@ -152,7 +153,7 @@ export async function guardarNota(_: ActionState, fd: FormData): Promise<ActionS
   listo();
 }
 
-const BORRABLES = ["feedings", "diapers", "sleeps", "notes"] as const;
+const BORRABLES = ["feedings", "diapers", "sleeps", "notes", "health_logs"] as const;
 
 export async function borrarRegistro(fd: FormData) {
   const { supabase, baby } = await requireBaby();
@@ -235,4 +236,41 @@ export async function sigueDurmiendo(fd: FormData) {
     if (!abierto?.length) await supabase.from("sleeps").update({ ended_at: null }).eq("id", id).eq("baby_id", baby.id);
   }
   listo();
+}
+
+/** Temperatura y/o síntomas. Opcional: recordatorio para volver a medir. */
+export async function guardarSalud(_: ActionState, fd: FormData): Promise<ActionState> {
+  const { supabase, baby } = await requireBaby();
+  const id = str(fd, "id");
+  const observed = when(fd, "observed_at");
+  if (observed.getTime() > Date.now() + 60_000) return { error: "La hora no puede ser futura." };
+  const temp = dec(fd, "temperature_c");
+  if (temp !== null && (temp < 34 || temp > 43)) return { error: "Revisá la temperatura (ej.: 37,8)." };
+  const symptoms = fd.getAll("symptoms").map(String).filter((c) => SINTOMAS.some((x) => x.code === c));
+  const notes = str(fd, "notes");
+  if (temp === null && !symptoms.length && !notes) return { error: "Cargá la temperatura o marcá algún síntoma." };
+
+  const row = {
+    observed_at: observed.toISOString(),
+    temperature_c: temp,
+    method: temp === null ? null : oneOf(str(fd, "method"), METODOS.map((m) => m.code)),
+    symptoms,
+    notes,
+  };
+  const { error } = id
+    ? await supabase.from("health_logs").update(row).eq("id", id).eq("baby_id", baby.id)
+    : await supabase.from("health_logs").insert({ ...row, family_id: baby.family_id, baby_id: baby.id });
+  if (error) return { error: "No se pudo guardar." };
+
+  const remedir = num(fd, "remedir");
+  if (!id && remedir && remedir > 0 && remedir <= 240) {
+    await supabase.from("one_off_reminders").insert({
+      family_id: baby.family_id,
+      due_at: new Date(Date.now() + remedir * 60000).toISOString(),
+      title: `Volvé a tomarle la temperatura a ${baby.first_name}`,
+      body: temp !== null ? `La última fue ${formatoTemp(temp)} a las ${hhmm(observed)}.` : "Para ver cómo sigue.",
+      url: "/registrar/temperatura",
+    });
+  }
+  listo(id ? alDia(observed) : "/");
 }

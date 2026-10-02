@@ -98,3 +98,13 @@ export type Medication = {
 };
 
 export type MedicationDose = { id: string; medication_id: string; given_at: string; notes: string | null; created_by: string | null };
+
+export type HealthLog = {
+  id: string;
+  observed_at: string;
+  temperature_c: number | null;
+  method: "axilar" | "rectal" | "oido" | "frente" | null;
+  symptoms: string[];
+  notes: string | null;
+  created_by: string | null;
+};

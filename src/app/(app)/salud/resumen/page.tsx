@@ -7,7 +7,8 @@ import { color, COLORES } from "@/lib/panal";
 import { estadoVacunas } from "@/lib/resumen";
 import { resumirPeriodo } from "@/lib/resumen-pediatra";
 import { duracion, edad, fechaCorta, fechaDia, fechaLarga, hhmm, startOfTodayAR, toDateInput } from "@/lib/time";
-import type { Appointment, Diaper, Feeding, Growth, Medication, MedicationDose, Note, Sleep, VaccineDose } from "@/lib/types";
+import type { Appointment, Diaper, Feeding, Growth, HealthLog, Medication, MedicationDose, Note, Sleep, VaccineDose } from "@/lib/types";
+import { etiquetaSintoma, formatoTemp } from "@/lib/sintomas";
 import { resolverPregunta } from "../actions";
 import { Imprimir } from "./Imprimir";
 
@@ -63,7 +64,7 @@ export default async function Page({ searchParams }: PageProps<"/salud/resumen">
   const iso = desdeReal.toISOString();
   const margen = new Date(desdeReal.getTime() - 3600_000).toISOString(); // para unir sesiones de toma que cruzan el inicio
 
-  const [f, d, s, notas, preguntas, medidas, vacunas, meds, dosis] = await Promise.all([
+  const [f, d, s, notas, preguntas, medidas, vacunas, meds, dosis, salud] = await Promise.all([
     supabase.from("feedings").select("*").eq("baby_id", baby.id).gte("started_at", margen).order("started_at").returns<Feeding[]>(),
     supabase.from("diapers").select("*").eq("baby_id", baby.id).gte("changed_at", iso).order("changed_at").returns<Diaper[]>(),
     supabase.from("sleeps").select("*").eq("baby_id", baby.id).or(`ended_at.is.null,ended_at.gte.${iso}`).returns<Sleep[]>(),
@@ -73,7 +74,10 @@ export default async function Page({ searchParams }: PageProps<"/salud/resumen">
     supabase.from("vaccine_doses").select("*").eq("baby_id", baby.id).returns<VaccineDose[]>(),
     supabase.from("medications").select("*").eq("baby_id", baby.id).returns<Medication[]>(),
     supabase.from("medication_doses").select("*").eq("baby_id", baby.id).gte("given_at", iso).returns<MedicationDose[]>(),
+    supabase.from("health_logs").select("*").eq("baby_id", baby.id).gte("observed_at", iso).order("observed_at").returns<HealthLog[]>(),
   ]);
+  const temps = (salud.data ?? []).filter((x) => x.temperature_c !== null);
+  const maxTemp = temps.length ? temps.reduce((a, b) => (b.temperature_c! > a.temperature_c! ? b : a)) : null;
 
   const r = resumirPeriodo({ desde: desdeReal, hasta: now, birthAt: baby.birth_at, feedings: f.data ?? [], diapers: d.data ?? [], sleeps: s.data ?? [] });
   const hayPecho = r.promedio.minPecho > 0;
@@ -203,6 +207,30 @@ export default async function Page({ searchParams }: PageProps<"/salud/resumen">
             </div>
           </Seccion>
         </>
+      )}
+
+      {(salud.data ?? []).length > 0 && (
+        <Seccion titulo="Temperatura y síntomas">
+          {maxTemp && (
+            <p className="text-[14px]">
+              Máxima: <strong>{formatoTemp(maxTemp.temperature_c!)}</strong> ({fechaCorta(maxTemp.observed_at)} {hhmm(maxTemp.observed_at)}
+              {maxTemp.method ? `, ${maxTemp.method}` : ""}) · {temps.filter((x) => x.temperature_c! >= 38).length} mediciones de 38 °C o más.
+            </p>
+          )}
+          <ul className="card px-4">
+            {(salud.data ?? []).map((x) => (
+              <li key={x.id} className="flex flex-col gap-0.5 border-b border-line py-2 last:border-0">
+                <span className="text-[14px] font-semibold">
+                  {fechaCorta(x.observed_at)} {hhmm(x.observed_at)}
+                  {x.temperature_c !== null ? ` · ${formatoTemp(x.temperature_c)}${x.method ? ` (${x.method})` : ""}` : ""}
+                </span>
+                {(x.symptoms.length > 0 || x.notes) && (
+                  <span className="text-[13px] text-muted">{[x.symptoms.map(etiquetaSintoma).join(", "), x.notes].filter(Boolean).join(" · ")}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Seccion>
       )}
 
       <Seccion titulo="Peso y medidas">

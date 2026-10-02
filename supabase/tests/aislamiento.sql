@@ -36,6 +36,8 @@ begin
   insert into shopping_items (family_id, name) values (fam_a, 'Pañales');
   insert into medications (family_id, baby_id, name, kind, times) values (fam_a, baby_a, 'Vitamina D', 'diaria', '{09:00}') returning id into med_a;
   insert into medication_doses (family_id, baby_id, medication_id) values (fam_a, baby_a, med_a);
+  insert into health_logs (family_id, baby_id, temperature_c) values (fam_a, baby_a, 38.2);
+  insert into one_off_reminders (family_id, due_at, title, body) values (fam_a, now() + interval '1 hour', 'x', 'y');
   insert into push_subscriptions (family_id, user_id, endpoint, p256dh, auth) values (fam_a, a, 'https://push.test/' || a, 'k', 'x');
   insert into storage.objects (bucket_id, name, owner) values ('fotos', fam_a || '/panales/test.jpg', a);
 
@@ -92,6 +94,16 @@ begin
   begin
     insert into medication_doses (family_id, baby_id, medication_id) values (fam_b, baby_b, med_a);
     fallas := fallas || 'B registró una dosis de un medicamento de A';
+  exception when others then null; end;
+
+  total := total + 1; select count(*) into n from health_logs where family_id = fam_a;
+  if n <> 0 then fallas := fallas || 'B ve las temperaturas de A'; end if;
+  total := total + 1; select count(*) into n from one_off_reminders where family_id = fam_a;
+  if n <> 0 then fallas := fallas || 'B ve los recordatorios de A'; end if;
+  total := total + 1;
+  begin
+    insert into one_off_reminders (family_id, due_at, title, body) values (fam_a, now(), 'spam', 'spam');
+    fallas := fallas || 'B le programó un aviso a la familia de A';
   exception when others then null; end;
 
   total := total + 1; update babies set first_name = 'hackeado' where id = baby_a; get diagnostics n = row_count;

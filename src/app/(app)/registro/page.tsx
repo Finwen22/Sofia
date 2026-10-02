@@ -5,13 +5,14 @@ import { requireBaby } from "@/lib/session";
 import { color, CONSISTENCIAS } from "@/lib/panal";
 import { duracionToma, minutosDeSueno } from "@/lib/resumen";
 import { duracion, fechaLarga, hhmm, toDateInput } from "@/lib/time";
-import type { Diaper, Feeding, Note, Sleep } from "@/lib/types";
+import type { Diaper, Feeding, Note, Sleep, HealthLog } from "@/lib/types";
+import { etiquetaSintoma, formatoTemp } from "@/lib/sintomas";
 import { borrarRegistro } from "../registrar/actions";
 import { DeleteButton } from "@/components/DeleteButton";
 
 export const metadata = { title: "Registro · Sofía" };
 
-const SLUG: Record<string, string> = { feedings: "toma", diapers: "panal", sleeps: "sueno", notes: "nota" };
+const SLUG: Record<string, string> = { feedings: "toma", diapers: "panal", sleeps: "sueno", notes: "nota", health_logs: "salud" };
 
 type Item = { at: string; tabla: string; id: string; icon: IconName; titulo: string; detalle?: string; foto?: string | null };
 
@@ -29,11 +30,12 @@ export default async function Page({ searchParams }: PageProps<"/registro">) {
   const desde = new Date(`${dia}T00:00:00-03:00`);
   const hasta = new Date(`${sumarDias(dia, 1)}T00:00:00-03:00`);
 
-  const [f, d, s, n] = await Promise.all([
+  const [f, d, s, n, h] = await Promise.all([
     supabase.from("feedings").select("*").eq("baby_id", baby.id).gte("started_at", desde.toISOString()).lt("started_at", hasta.toISOString()).returns<Feeding[]>(),
     supabase.from("diapers").select("*").eq("baby_id", baby.id).gte("changed_at", desde.toISOString()).lt("changed_at", hasta.toISOString()).returns<Diaper[]>(),
     supabase.from("sleeps").select("*").eq("baby_id", baby.id).lt("started_at", hasta.toISOString()).or(`ended_at.is.null,ended_at.gte.${desde.toISOString()}`).returns<Sleep[]>(),
     supabase.from("notes").select("*").eq("baby_id", baby.id).gte("created_at", desde.toISOString()).lt("created_at", hasta.toISOString()).returns<Note[]>(),
+    supabase.from("health_logs").select("*").eq("baby_id", baby.id).gte("observed_at", desde.toISOString()).lt("observed_at", hasta.toISOString()).returns<HealthLog[]>(),
   ]);
   const tomas = f.data ?? [];
   const panales = d.data ?? [];
@@ -63,6 +65,11 @@ export default async function Page({ searchParams }: PageProps<"/registro">) {
       at: z.started_at, tabla: "sleeps", id: z.id, icon: "moon" as const,
       titulo: z.ended_at ? `Durmió ${duracion((new Date(z.ended_at).getTime() - new Date(z.started_at).getTime()) / 60000)}` : "Durmiendo",
       detalle: z.ended_at ? `Hasta las ${hhmm(z.ended_at)}` : undefined,
+    })),
+    ...(h.data ?? []).map((x) => ({
+      at: x.observed_at, tabla: "health_logs", id: x.id, icon: "thermo" as const,
+      titulo: x.temperature_c !== null ? `Temperatura ${formatoTemp(x.temperature_c)}` : "Síntomas",
+      detalle: [x.symptoms.map(etiquetaSintoma).join(", "), x.notes].filter(Boolean).join(" · "),
     })),
     ...notas.map((x) => ({
       at: x.created_at, tabla: "notes", id: x.id, icon: "note" as const,
