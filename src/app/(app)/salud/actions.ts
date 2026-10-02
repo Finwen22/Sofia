@@ -86,7 +86,7 @@ export async function guardarMedida(_: ActionState, fd: FormData): Promise<Actio
     family_id: baby.family_id, baby_id: baby.id, measured_on: fecha, weight_g: peso, length_cm: talla, head_cm: pc, notes: str(fd, "notes"),
   });
   if (error) return { error: "Revisá las medidas: peso en gramos (ej. 4250), talla y perímetro en cm." };
-  volver();
+  volver("/salud/crecimiento");
 }
 
 export async function borrarMedida(fd: FormData) {

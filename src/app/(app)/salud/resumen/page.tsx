@@ -9,6 +9,7 @@ import { resumirPeriodo } from "@/lib/resumen-pediatra";
 import { duracion, edad, fechaCorta, fechaDia, fechaLarga, hhmm, startOfTodayAR, toDateInput } from "@/lib/time";
 import type { Appointment, Diaper, Feeding, Growth, HealthLog, Medication, MedicationDose, Note, Sleep, VaccineDose } from "@/lib/types";
 import { etiquetaSintoma, formatoTemp } from "@/lib/sintomas";
+import { edadParaCurva, MAX_DIAS, puntajeZ, textoPercentil } from "@/lib/oms";
 import { resolverPregunta } from "../actions";
 import { Imprimir } from "./Imprimir";
 
@@ -97,6 +98,14 @@ export default async function Page({ searchParams }: PageProps<"/salud/resumen">
   const vacPeriodo = vac.filter((v) => v.aplicada && v.aplicada.applied_on >= toDateInput(desdeReal));
   const vacPendientes = vac.filter((v) => v.estado === "atrasada" || v.estado === "proxima");
   const pesoNacer = baby.birth_weight_g;
+  // Percentil OMS del peso de cada medida (0-24 meses).
+  const sexo = baby.sex === "masculino" ? "m" : "f";
+  const pct = (m: Growth) => {
+    if (!m.weight_g) return null;
+    const { dias } = edadParaCurva(baby.birth_at, `${m.measured_on}T12:00:00-03:00`, baby.gestation_weeks);
+    const z = dias <= MAX_DIAS ? puntajeZ("peso", sexo, dias, m.weight_g / 1000) : null;
+    return z === null ? null : `peso ${textoPercentil(z)}`;
+  };
   const ultimoPeso = (medidas.data ?? []).find((m) => m.weight_g);
 
   return (
@@ -248,6 +257,7 @@ export default async function Page({ searchParams }: PageProps<"/salud/resumen">
                   <span className="text-right text-muted">
                     {[m.weight_g && `${m.weight_g.toLocaleString("es-AR")} g`, m.length_cm && `${m.length_cm} cm`, m.head_cm && `PC ${m.head_cm} cm`].filter(Boolean).join(" · ")}
                     {gd !== null && ` · ${gd >= 0 ? "+" : ""}${gd} g/día`}
+                    {pct(m) && ` · ${pct(m)}`}
                   </span>
                 </li>
               );

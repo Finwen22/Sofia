@@ -182,6 +182,16 @@ export default async function Page() {
       </Seccion>
 
       <Seccion titulo="Crecimiento" accion={<Agregar href="/salud/crecimiento/nuevo" label="Medida" />}>
+        <Link href="/salud/crecimiento" className="card flex items-center gap-3.5 px-4 py-3.5">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-soft text-soft-ink">
+            <Icon name="ruler" />
+          </span>
+          <span className="flex flex-1 flex-col gap-0.5">
+            <span className="text-[15px] font-semibold">Curvas de la OMS</span>
+            <span className="text-[13px] text-muted">Peso, talla y perímetro cefálico con su percentil</span>
+          </span>
+          <Icon name="chev" size={18} className="text-muted" />
+        </Link>
         {listaMedidas.length === 0 ? (
           <p className="text-[15px] text-muted">Cargá el peso y la talla de cada control para ver cómo crece.</p>
         ) : (
