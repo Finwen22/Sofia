@@ -30,6 +30,17 @@ export default async function Page() {
         </div>
       </header>
 
+      <Link href="/diario" className="card flex items-center gap-3.5 border-accent/50 px-4 py-3.5">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-accent text-on-accent">
+          <Icon name="heart" />
+        </span>
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[15px] font-semibold">Diario y primeras veces</span>
+          <span className="text-[13px] text-muted">Recuerdos con fotos, solo para la familia</span>
+        </span>
+        <Icon name="chev" size={18} className="text-muted" />
+      </Link>
+
       <div className="grid grid-cols-2 gap-2.5">
         <Link href="/ficha/editar" className="btn-ghost h-12 text-[15px]">Editar ficha</Link>
         <Link href="/ficha/ajustes" className="btn-ghost h-12 text-[15px]"><Icon name="settings" size={18} /> Ajustes</Link>

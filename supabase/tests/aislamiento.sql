@@ -14,7 +14,7 @@ declare
   a uuid := gen_random_uuid();
   b uuid := gen_random_uuid();
   c uuid := gen_random_uuid();
-  fam_a uuid; fam_b uuid; baby_a uuid; baby_b uuid; feed_a uuid; med_a uuid;
+  fam_a uuid; fam_b uuid; baby_a uuid; baby_b uuid; feed_a uuid; med_a uuid; entry_a uuid;
   n int;
   total int := 0;
   fallas text[] := '{}';
@@ -37,6 +37,8 @@ begin
   insert into medications (family_id, baby_id, name, kind, times) values (fam_a, baby_a, 'Vitamina D', 'diaria', '{09:00}') returning id into med_a;
   insert into medication_doses (family_id, baby_id, medication_id) values (fam_a, baby_a, med_a);
   insert into health_logs (family_id, baby_id, temperature_c) values (fam_a, baby_a, 38.2);
+  insert into diary_entries (family_id, baby_id, happened_on, title) values (fam_a, baby_a, current_date, 'Primer baño') returning id into entry_a;
+  insert into diary_photos (family_id, entry_id, path) values (fam_a, entry_a, fam_a || '/diario/x.jpg');
   insert into one_off_reminders (family_id, due_at, title, body) values (fam_a, now() + interval '1 hour', 'x', 'y');
   insert into push_subscriptions (family_id, user_id, endpoint, p256dh, auth) values (fam_a, a, 'https://push.test/' || a, 'k', 'x');
   insert into storage.objects (bucket_id, name, owner) values ('fotos', fam_a || '/panales/test.jpg', a);
@@ -104,6 +106,14 @@ begin
   begin
     insert into one_off_reminders (family_id, due_at, title, body) values (fam_a, now(), 'spam', 'spam');
     fallas := fallas || 'B le programó un aviso a la familia de A';
+  exception when others then null; end;
+
+  total := total + 1; select count(*) into n from diary_entries where family_id = fam_a;
+  if n <> 0 then fallas := fallas || 'B ve el diario de A'; end if;
+  total := total + 1;
+  begin
+    insert into diary_photos (family_id, entry_id, path) values (fam_b, entry_a, fam_b || '/diario/y.jpg');
+    fallas := fallas || 'B le agregó una foto a un recuerdo de A';
   exception when others then null; end;
 
   total := total + 1; update babies set first_name = 'hackeado' where id = baby_a; get diagnostics n = row_count;

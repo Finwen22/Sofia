@@ -108,3 +108,14 @@ export type HealthLog = {
   notes: string | null;
   created_by: string | null;
 };
+
+export type DiaryEntry = {
+  id: string;
+  happened_on: string;
+  milestone: string | null;
+  title: string;
+  body: string | null;
+  created_by: string | null;
+};
+
+export type DiaryPhoto = { id: string; entry_id: string; path: string; position: number };

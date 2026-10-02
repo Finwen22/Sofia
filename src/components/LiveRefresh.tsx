@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-const TABLAS = ["feedings", "diapers", "sleeps", "notes", "appointments", "vaccine_doses", "growth_records", "shopping_items", "babies"];
+const TABLAS = [
+  "feedings", "diapers", "sleeps", "notes", "appointments", "vaccine_doses", "growth_records", "shopping_items", "babies",
+  "medications", "medication_doses", "health_logs", "diary_entries", "diary_photos",
+];
 
 /**
  * Refresca la pantalla cuando el otro celular carga algo, y cuando la app

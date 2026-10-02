@@ -285,6 +285,17 @@ export default async function Inicio({ searchParams }: PageProps<"/">) {
         <Icon name="chev" size={18} className="text-muted" />
       </Link>
 
+      <Link href="/diario" className="card flex items-center gap-3.5 px-4 py-3.5">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-soft text-soft-ink">
+          <Icon name="heart" />
+        </span>
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[15px] font-semibold">Diario</span>
+          <span className="text-[13px] text-muted">Guardá una primera vez o un recuerdo con fotos</span>
+        </span>
+        <Icon name="chev" size={18} className="text-muted" />
+      </Link>
+
       {!!preguntas.count && (
         <Link href="/salud#preguntas" className="card flex items-center gap-3.5 px-4 py-3.5">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-soft text-soft-ink">
